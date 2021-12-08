@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1638974173 "c:/Users/conor/Documents/coding/ml_module/final_assignment/Final-Assignment/report/main.tex" "main.pdf" "main" 1638974174
+["pdflatex"] 1638978305 "c:/Users/conor/Documents/coding/ml_module/final_assignment/Final-Assignment/report/main.tex" "main.pdf" "main" 1638978305
   "C:/Users/conor/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1635626803 9726368 6b0c1300520ebf4aa24b7ad7978f9390 ""
   "C:/Users/conor/AppData/Local/MiKTeX/pdftex/config/pdftex.map" 1636100994 170731 90cab76faf2ce2bf685a336797d8002e ""
   "C:/Users/conor/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx10.tfm" 1136765053 1328 c834bbb027764024c09d3d2bf908b5f0 ""
@@ -23,13 +23,13 @@
   "C:/Users/conor/AppData/Local/Programs/MiKTeX/tex/latex/base/inputenc.sty" 1623738100 5049 969aec05d5f39c43f8005910498fcf90 ""
   "C:/Users/conor/AppData/Local/Programs/MiKTeX/tex/latex/base/size10.clo" 1623738100 8448 05e1c6a8fc5db344ed9d7aeb299acbce ""
   "C:/Users/conor/AppData/Local/Programs/MiKTeX/tex/latex/l3backend/l3backend-pdftex.def" 1634573416 29971 6c47712bf4bc87d15b2ca318615f75a3 ""
-  "appendix.aux" 1638974173 519 a18e54656f041a5f166f56b873310aff "pdflatex"
+  "appendix.aux" 1638978305 519 a18e54656f041a5f166f56b873310aff "pdflatex"
   "appendix.tex" 1638973771 31 30e53a2be39d88e739871140c10c7192 ""
-  "c:/Users/conor/Documents/coding/ml_module/final_assignment/Final-Assignment/report/main.tex" 1638974172 682 b249f6d9eefe6cdb1950b3f80e7d0c63 ""
-  "main.aux" 1638974173 1371 e7d1c1c558b860d651a46f8a616c0f79 "pdflatex"
-  "main.tex" 1638974172 682 b249f6d9eefe6cdb1950b3f80e7d0c63 ""
+  "c:/Users/conor/Documents/coding/ml_module/final_assignment/Final-Assignment/report/main.tex" 1638978304 849 be47f256fd09b54c501da2ff94fb81c3 ""
+  "main.aux" 1638978305 1371 e7d1c1c558b860d651a46f8a616c0f79 "pdflatex"
+  "main.tex" 1638978304 849 be47f256fd09b54c501da2ff94fb81c3 ""
   (generated)
-  "main.pdf"
-  "main.log"
-  "appendix.aux"
   "main.aux"
+  "appendix.aux"
+  "main.log"
+  "main.pdf"
