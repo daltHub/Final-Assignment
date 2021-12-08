@@ -45,6 +45,7 @@ def dummy(X_features, y):
 
     y : array
         target features
+        
     Returns
     ----------
     predictions : array
