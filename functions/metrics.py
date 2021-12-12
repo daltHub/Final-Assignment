@@ -33,25 +33,3 @@ def calculate_mse(pred, true):
     average_loss = mean(losses)
     # print(f"average loss = {average_loss}")
     return average_loss
-
-def dummy(X_features, y):
-    """
-    generates predictions using a dummy regressor
-
-    Parameters
-    ----------
-    X_features : array 
-        features
-
-    y : array
-        target features
-        
-    Returns
-    ----------
-    predictions : array
-        mean loss between predictions and truth
-
-    """
-    x = DummyRegressor(strategy="mean")
-    x.fit(X_features, y)
-    return x.predict(X_features)
