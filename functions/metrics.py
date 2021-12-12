@@ -1,9 +1,7 @@
 """
 This file contains functions that help with evaluating performance of models
 """
-from numpy.lib.function_base import average
 from sklearn.metrics import mean_squared_error
-from sklearn.dummy import DummyRegressor
 from numpy import mean
 
 def test():
@@ -16,10 +14,10 @@ def calculate_mse(pred, true):
 
     Parameters
     ----------
-    pred : array 
+    pred : list 
         predicted feature values
 
-    true : array 
+    true : list 
         true feature values
 
     Returns
