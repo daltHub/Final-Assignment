@@ -12,3 +12,49 @@ def test():
     """Test function"""
     print("Imported Correctly")
 
+def map_plot(img:str, title:str, xlabel:str, ylabel:str, extents:list, lats:list, longs:list, labels:list):
+    """
+    Plot labelled points on a background image (possibly a map)
+
+    Parameters
+    ----------
+    img : str
+        location of background image
+    title : str
+        title of image
+    xlabel : str
+        label on the x-axis
+    ylabel : str
+        label on the y-axis
+    extents : list
+        extent of image (useful for maps). also used to maintein aspect ratio.
+    lats : list
+        List of latitude points.
+    longs : list
+        List of longitude points.
+    labels : list
+        List of labels for each point.
+
+    Returns
+    -----------
+    Nothing - Generates a matplotlib figure.
+    """
+    im = plt.imread(img)
+    plt.figure(f'{title}',figsize=(10,12))
+    plt.imshow(im, extent= extents)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+
+
+    
+    # changing aspect ratio of figure to match image 
+    # source: https://stackoverflow.com/questions/45685726/python-scatter-plot-over-background-image-for-data-verification?noredirect=1&lq=1
+    ext = extents
+    aspect=im.shape[0]/float(im.shape[1])*((extents[1]-extents[0])/(extents[3]-extents[2]))
+    plt.gca().set_aspect(aspect)
+
+    for i in range(len(longs)):
+        plt.scatter(longs[i], lats[i])
+        plt.annotate(f'{labels[i]}',xy=(longs[i],lats[i]))
+    plt.rc('font', size=14)
