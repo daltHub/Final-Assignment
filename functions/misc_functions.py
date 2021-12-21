@@ -75,7 +75,7 @@ def plot_time_series_data(title:str, xlabel:str, ylabel:str, times:pd.Series, va
 def oneHot(X, y):
     enc = OneHotEncoder()
     enc.fit(X, y)
-    return
+    return enc.transform(X).toarray()
 
 
 def make_features(periods:int, dataframe:pd.DataFrame, col:str, name:str):

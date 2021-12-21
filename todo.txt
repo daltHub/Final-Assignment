@@ -1,15 +1,3 @@
-make feature arrays, save to csv
-different for each
-need a feature time of day - use T and get remainder from 
-Onehot encoding for days instead of what I currenty have.
-Flag for weekend.
-
-remove final day.
-
-what features should I be using? have different csvs for 10 mins, 30 mins and 1hr.
-make these
-make a number of lags for each one:
-    time of day 
-    num bikes
-    day of week
-    
+time of day 
+num bikes
+day of week
