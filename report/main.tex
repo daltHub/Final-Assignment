@@ -1,5 +1,27 @@
 \documentclass{article}
-\usepackage[utf8]{inputenc}
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+\usepackage{mdframed}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\lstset{
+numbers=left, 
+numberstyle=\small, 
+numbersep=8pt, 
+frame = single, 
+language=Python, 
+framexleftmargin=15pt}
+% Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
 
 \title{Final Report}
 \author{Conor Dalton}
@@ -7,33 +29,9 @@
 
 \begin{document}
 
-\maketitle
 
-\section{Predicting Bike Station Occupancy}
-\subsection{Feature Engineering}
-\subsubsection{Selection of Station}
-
-\subsection{Machine Learning Methodology}
-
-\subsection{Evaluation}
-
-\section{Shorter Questions}
-
-\subsection{ROC Curve}
-An ROC curve is...
-
-\subsection{Situations Where Linear Regression will be Inaccurate}
-Linear regression is ... 
-
-\subsection{SVM Classifier vs. Neural Net Classifier}
-An SVM Classifier... an Neural Net Classifier
-
-\subsection{Operation of a Convolutional Layer in a ConvNet}
-ConvNets are... Convolutional layers are\dots
-
-\subsection{K-fold Cross-Validation}
-Resampling is done to\dots
-
+\include{part1.tex}
+\include{part2.tex}
 
 \include{appendix.tex}
 \end{document}
