@@ -1,0 +1,8 @@
+Interpolate missing data
+maybe downsample
+Reuse some code from my project
+start report - write report while writing code
+add images and stuff
+split data into test and training
+
+I'm such a loser
