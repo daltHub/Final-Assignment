@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import OneHotEncoder
 
 def test():
     """Test function"""
@@ -58,12 +59,32 @@ def map_plot(img:str, title:str, xlabel:str, ylabel:str, extents:list, lats:list
         plt.annotate(f'{labels[i]}',xy=(longs[i],lats[i]))
 
 
-def plot_time_series_data(title:str, xlabel:str, ylabel:str, ):
+def plot_time_series_data(title:str, xlabel:str, ylabel:str, times:pd.Series, values:pd.Series):
     plt.figure(f'{title}')
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.rc('font', size = 12)
-
-
+    times = times
+    values = values
+    plt.show()
     return
+
+
+    
+def oneHot(X, y):
+    enc = OneHotEncoder()
+    enc.fit(X, y)
+    return
+
+
+def make_features(periods:int, dataframe:pd.DataFrame, col:str, name:str):
+    X = dataframe[col]
+    X = X.to_frame()
+    X.rename({col:name},axis = 1, inplace=True)
+
+    X = X.shift(periods=periods, fill_value = 0) # should change fill value
+    X.reset_index(inplace = True)
+    X.drop(columns=['index'], inplace=True)
+    # X.drop(axis=0, )
+    return X
