@@ -1,5 +1,8 @@
-time of day 
-num bikes
-day of week
-dbikes - a column of differences beween last 2 available 
+add dummy
+
+graph predictions
+
+table of coefficients
+
+start decision tree or kneighbours
 
