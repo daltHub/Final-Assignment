@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures
 
 def test():
     """Test function"""
@@ -88,3 +88,27 @@ def make_features(periods:int, dataframe:pd.DataFrame, col:str, name:str):
     X.drop(columns=['index'], inplace=True)
     # X.drop(axis=0, )
     return X
+
+
+def make_poly_data(X_features, degree):
+    """
+    Makes polynomial products of the training data
+
+    Parameters
+    ----------
+    X_features : numpy.ndarray
+        features
+    degree : int
+        max polynomial order
+        
+    Returns
+    ----------
+    poly_X : numpy.ndarray
+    """
+
+    poly = PolynomialFeatures(degree)
+    poly_X = poly.fit_transform(X_features)
+    # print(X)
+    # print(poly_X)
+    # print(PolynomialFeatures(5).fit(X).get_feature_names(['X1', 'X2']))
+    return poly_X

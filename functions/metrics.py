@@ -1,7 +1,7 @@
 """
 This file contains functions that help with evaluating performance of models
 """
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from numpy import mean
 
 def test():
@@ -31,3 +31,9 @@ def calculate_mse(pred, true):
     average_loss = mean(losses)
     # print(f"average loss = {average_loss}")
     return average_loss
+
+def calculate_R2(pred, true):
+    r2s = r2_score(y_true=true, y_pred=pred)
+    average_r2 = mean(r2s)
+    # print(f"average loss = {average_loss}")
+    return average_r2
