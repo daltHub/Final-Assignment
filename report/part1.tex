@@ -15,7 +15,8 @@ I also chose station 109 (Buckingham Street) as it is beside Connolly and I assu
 \caption{Map of Dublin Bike stations.}
 \end{figure}
 
-The data that I needed was the time and number of available bikes.
+
+
 
 \begin{figure}[H]
     \centering
@@ -29,23 +30,40 @@ The data that I needed was the time and number of available bikes.
     \includegraphics[width=0.5\textwidth]{images/buckingham data.png}
     \caption{Map of Dublin Bike stations.}
     \end{figure}
-Much of the data was missing. 
+
+\subsubsection{Data Cleaning}
+As can be seen in figures 2 and 3, much of the data in the first few weeks is missing.
 I decided to simply remove the first 27 days in both datasets as 
 there was so much missing that it would likely make it more difficult to 
 work with the data in a way that didn't negatively affect the performance of the models.
 It is likely that there were other missing data points, this is evident in that not every day has the same number of entries (between 287 and 289).
-This is unlikey to have any major impact on my predictions as it is very close to 288 
+This is unlikey to have any major impact on my predictions as it is very close to 288
 (the number of 5 minute time blocks in a day).
 
-
+\subsubsection{Feature Selection}
+The features I took from the datasets are 
 
 \par 
 
 
-\subsection{Machine Learning Methodology}
-The Machine learning methods I decided to use are\dots
-\subsubsection{Method 1}
-\subsubsection{Method 2}
+\subsection{Ridge Regression}
+I initially decided to use ridge regression to predict future values. 
+I wanted to use some form of linear regression because I used them for a similar problem in my group project.
+Lasso regression is more likely than Ridge to reduce coefficients to zero but I was curious to see how even the lightly weighted parameters were affected so I decided to use ridge regression instead.
+\par 
+
+I used 5 fold cross validation to find the ideal value for alpha to use and I found that varying alpha had very little effect until alpha became quite large 
+as can be seen in figures\dots. 
+I decided to use a value of 1 for every model as this value gave a near minimum mean-squared error for every prediction model.
+\par 
+The metric I used to evaluate performance is mean squared error. 
+I feel that this is a suitable metric as it tells us how far off predictions from a model are. 
+
+\par 
+
+
+
+\subsection{K Neighbours Regression}
 
 \subsection{Evaluation}
 \subsubsection{Method 1}
