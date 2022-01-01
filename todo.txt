@@ -1,8 +1,7 @@
-add dummy
+errors from polynomials
+at least one predictions plot
+look into notes to decide other method
 
-graph predictions
+write report thoroughly
 
-table of coefficients
-
-start decision tree or kneighbours
-
+start q1 of thing
