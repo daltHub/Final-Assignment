@@ -15,21 +15,21 @@ I also chose station 109 (Buckingham Street) as it is beside Connolly and I assu
 \caption{Map of Dublin Bike stations.}
 \end{figure}
 
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/buckingham data.png}
+    \caption{Availability of bikes over time at Buckingham Street}
+    \end{figure}
 
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{images/kilmainham data.png}
-    \caption{Map of Dublin Bike stations.}
+    \caption{Availability of bikes over time at Kilmainham Gaol}
     \end{figure}
 \par 
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\textwidth]{images/buckingham data.png}
-    \caption{Map of Dublin Bike stations.}
-    \end{figure}
+
 
 \subsubsection{Data Cleaning}
 As can be seen in figures 2 and 3, much of the data in the first few weeks is missing.
@@ -41,7 +41,42 @@ This is unlikey to have any major impact on my predictions as it is very close t
 (the number of 5 minute time blocks in a day).
 
 \subsubsection{Feature Selection}
-The features I took from the datasets are 
+The features I took from the datasets are the time and the number of bikes at that time.
+This allows other features to be derived from this.
+\par 
+I turned the time of day into a float (it was slighlty skewed because the first reading of the year was around 6am.)
+This was obviously an important feature to take into account as different times of day obviously have different behaviour in terms of bike usage.
+
+
+\par
+The day of week undoubtedly has an effect on how dublin bikes are used. 
+This means that it is important to take the day of week into account when training a predictor on this data.
+Weekdays can be represented with numbers (e.g. from 1-7) but this could cause problems in linear models.
+To counteract this I used one-hot encoding, 
+this allows categorical data such as weekday to be presented in such a way that is less likely to cause unnecessary bias.
+The downside of this is that it adds many more dimensions to the feature vectors which can make models unnecessarily complex.
+
+\par 
+As I was attempting to predict values for the number of bikes available,
+I used past values for available bikes.
+For each type of prediction I used the 5 previous values for available bikes (for 10 minute ahead prediction I used the values at 10, 15, 20, 25 and 30 minutes earlier. This is the same as what I did for 30 and 60 minute predictions.)
+
+\par 
+I also made some new features DB1, DB2, and DDB1DB2 as can be seen in figure 4.
+DB1 and DB2 are the differences between number of bikes in the most recent datapoints.
+DDB1DB2 is kind of like the 2nd derivative as it is the difference between DB1 and DB2.
+I thought that these features would be useful in prediction.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/example_features.jpg}
+    \caption{Example of feature dataframe for 10-minute-ahead prediction}
+    \end{figure}
+\par 
+
+For the ridge regression prediction I also trained similar models with polynomial combinations of the data to see if this better captured the relationships between the different features.
+I used every ccombination of features up to a power of 2 which gives 153 features.
+This obviously makes a far more complex model and it is far more confusing to figure out what models are doing when there are so many different features.
 
 \par 
 
@@ -58,13 +93,117 @@ I decided to use a value of 1 for every model as this value gave a near minimum 
 \par 
 The metric I used to evaluate performance is mean squared error. 
 I feel that this is a suitable metric as it tells us how far off predictions from a model are. 
-
+\par
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/ridge_kfold1.png}
+    \caption{K-fold cross validation for ridge regression.}
+    \end{figure}
 \par 
 
+Training ridge regression on all of the datasets produced very similar graphs (see appendix) so an alpha value of 1 was used for all.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/coefficients1.png}
+    \caption{Weighting of coefficients for ridge regressor predicting 10 minutes ahead.}
+    \end{figure}
+\par 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/coefficients3.png}
+    \caption{Weighting of coefficients for ridge regressor predicting 30 minutes ahead.}
+    \end{figure}
+\par 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/coefficients5.png}
+    \caption{Weighting of coefficients for ridge regressor predicting 50 minutes ahead.}
+    \end{figure}
+\par 
 
 
 \subsection{K Neighbours Regression}
 
+I decided to use K-neighbours regression as it works quite differently from ridge regression and is supposedly suitable for predictions in time series data.
+I used K-fold cross-validation on a number of parameters used in training.
+Changing the value of p had almost no effect ao I saw no reason to change it from the default.
+Changing the number of leaves had almost no effect so I saw no reason to change it from the default.
+Changing the number of neighbours had a massive effect as can be seen in figure 9.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/neighbors_kfold1.png}
+    \caption{K-fold cross validation for k-neighbors regression.}
+    \end{figure}
+\par 
+
+All of the k-fold cross validation graphs produced similar shapes with the minimum mse being around 10 neighbours and getting diminishing returns for anything higher.
+
 \subsection{Evaluation}
-\subsubsection{Method 1}
-\subsubsection{Method 2}
+I decided to use what I felt was an appropriate dummy predictor.
+The dummy predictor simply predicts that the value will be the same as the previous value.
+for example, when predicting 10 minutes ahead the dummy will use the value 10-minutes before.
+This makes the dummy predictor quite accurrate and explains why the predictor models did not always outperform it.
+\subsubsection{Ridge Regression}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse1.png}
+    \caption{Mean squared error with ridge regression on Buckingham Street.}
+    \end{figure}
+\par
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse2.png}
+    \caption{Mean squared error with ridge regression at Kilmainham Gaol.}
+    \end{figure}
+\par
+
+As can be seen in figures 10 and 11, 
+the ridge predictors performed slightly better than the dummy predictors.
+It is also clear that using the polynomial features had vey little effect on the performance.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/preds1.png}
+    \caption{Predictions using ridge regression}
+    \end{figure}
+\par
+
+\subsubsection{K-neighbors Regression}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse3.png}
+    \caption{Mean squared error with K-neighbours on Buckingham Street.}
+    \end{figure}
+\par
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse4.png}
+    \caption{Mean squared error with K-neighbours at Kilmainham Gaol.}
+    \end{figure}
+\par
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/preds7.png}
+    \caption{Predictions using K-neighbours regression}
+    \end{figure}
+\par
+\subsubsection{Comparison}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse5.png}
+    \caption{Mean squared error with ridge regression and K-neighbours  on Buckingham Street.}
+    \end{figure}
+\par
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/mse6.png}
+    \caption{Mean squared error with ridge regression and K-neighbours at Kilmainham Gaol.}
+    \end{figure}
+\par
+
+As can be seen in figures \dots 
