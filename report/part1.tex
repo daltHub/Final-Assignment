@@ -11,7 +11,7 @@ I also chose station 109 (Buckingham Street) as it is beside Connolly and I assu
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.5\textwidth]{images/map.png}
+\includegraphics[width=0.7\textwidth]{images/map.png}
 \caption{Map of Dublin Bike stations.}
 \end{figure}
 
@@ -88,7 +88,7 @@ Lasso regression is more likely than Ridge to reduce coefficients to zero but I 
 \par 
 
 I used 5 fold cross validation to find the ideal value for alpha to use and I found that varying alpha had very little effect until alpha became quite large 
-as can be seen in figures\dots. 
+as can be seen in figure 5. 
 I decided to use a value of 1 for every model as this value gave a near minimum mean-squared error for every prediction model.
 \par 
 The metric I used to evaluate performance is mean squared error. 
@@ -101,7 +101,7 @@ I feel that this is a suitable metric as it tells us how far off predictions fro
     \end{figure}
 \par 
 
-Training ridge regression on all of the datasets produced very similar graphs (see appendix) so an alpha value of 1 was used for all.
+Training ridge regression on all of the datasets produced very similar graphs so an alpha value of 1 was used for all.
 
 \begin{figure}[H]
     \centering
@@ -120,7 +120,7 @@ Training ridge regression on all of the datasets produced very similar graphs (s
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\textwidth]{images/coefficients5.png}
-    \caption{Weighting of coefficients for ridge regressor predicting 50 minutes ahead.}
+    \caption{Weighting of coefficients for ridge regressor predicting 60 minutes ahead.}
     \end{figure}
 \par 
 
@@ -128,9 +128,9 @@ Training ridge regression on all of the datasets produced very similar graphs (s
 \subsection{K Neighbours Regression}
 
 I decided to use K-neighbours regression as it works quite differently from ridge regression and is supposedly suitable for predictions in time series data.
-I used K-fold cross-validation on a number of parameters used in training.
-Changing the value of p had almost no effect ao I saw no reason to change it from the default.
-Changing the number of leaves had almost no effect so I saw no reason to change it from the default.
+I used K-fold cross-validation to tune number of parameters used in training.
+Changing the value of p, which affects how distances between pointsare handled, had almost no effect ao I saw no reason to change it from the default.
+Changing the leaf size had almost no effect so I saw no reason to change it from the default.
 Changing the number of neighbours had a massive effect as can be seen in figure 9.
 
 \begin{figure}[H]
@@ -140,13 +140,17 @@ Changing the number of neighbours had a massive effect as can be seen in figure 
     \end{figure}
 \par 
 
-All of the k-fold cross validation graphs produced similar shapes with the minimum mse being around 10 neighbours and getting diminishing returns for anything higher.
+All of the cross validation graphs produced similar shapes with the minimum mse being around 10 neighbours and getting diminishing returns for anything higher.
 
 \subsection{Evaluation}
-I decided to use what I felt was an appropriate dummy predictor.
+I decided to use what I felt was an appropriate baseline predictor.
 The dummy predictor simply predicts that the value will be the same as the previous value.
 for example, when predicting 10 minutes ahead the dummy will use the value 10-minutes before.
 This makes the dummy predictor quite accurrate and explains why the predictor models did not always outperform it.
+\par 
+Another reason that the dummy predictor performs comparably to the other predictors is that it chooses integers which the regressors do not do.
+This makes the mse quite low as the values often do not change for long periods of time.
+
 \subsubsection{Ridge Regression}
 \begin{figure}[H]
     \centering
@@ -162,8 +166,12 @@ This makes the dummy predictor quite accurrate and explains why the predictor mo
 \par
 
 As can be seen in figures 10 and 11, 
-the ridge predictors performed slightly better than the dummy predictors.
+the ridge predictors performed slightly better than the dummy predictors in every scenario.
 It is also clear that using the polynomial features had vey little effect on the performance.
+As I expectedwould happen, the performance drops as you try to predict further into the future.
+This is likely because the features are less related, 
+for example the amount of bikes 10 minutes ago is far more related to the current number of bikes than tyhe number of bikes 60 minutes ago.
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{images/preds1.png}
@@ -171,7 +179,9 @@ It is also clear that using the polynomial features had vey little effect on the
     \end{figure}
 \par
 
-\subsubsection{K-neighbors Regression}
+As can be seen in figure 12, the predictions look like they are quite accurrate.
+
+\subsubsection{K nearest neighbors Regression}
 
 \begin{figure}[H]
     \centering
@@ -182,28 +192,37 @@ It is also clear that using the polynomial features had vey little effect on the
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{images/mse4.png}
-    \caption{Mean squared error with K-neighbours at Kilmainham Gaol.}
+    \caption{Mean squared error with K nearest neighbors Regression at Kilmainham Gaol.}
     \end{figure}
 \par
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{images/preds7.png}
-    \caption{Predictions using K-neighbours regression}
+    \caption{Predictions using K nearest neighbors Regression regression}
     \end{figure}
 \par
+
+As can be seen in figures 13 and 14, the K nearest neighbour regressor performs similar to the baseline predictor for short term predictions and performs a bit better for longer term predictions.
+The predictions in figure 15 look quite accurrate.
+
+
 \subsubsection{Comparison}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{images/mse5.png}
-    \caption{Mean squared error with ridge regression and K-neighbours  on Buckingham Street.}
+    \caption{Mean squared error with ridge regression and K nearest neighbors Regression  on Buckingham Street.}
     \end{figure}
 \par
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{images/mse6.png}
-    \caption{Mean squared error with ridge regression and K-neighbours at Kilmainham Gaol.}
+    \caption{Mean squared error with ridge regression and K nearest neighbors Regression at Kilmainham Gaol.}
     \end{figure}
 \par
 
-As can be seen in figures \dots 
+As can be seen in figures 16 and 17, th Ridge regressor performs slightly better for the short term predictions and the K-nearest neighbors performs slightly better for the longer term predictions.
+
+\par 
+Interestingly, the predictions at Kilmainham gaol are worse in every scenario.
+Obviously the solutions that work well at Buckingham street are not equally appropriate for every bike station.

@@ -1,4 +1,1617 @@
 \appendix
 
 \section{Appendix}
-asdasd
+Most of the code is converted from jupyter notebooks so it will not work well if simply pasted into a file.
+If you wish to run it you should download it from the accompanying zip folder.
+
+
+\subsection{station\_selection.py}
+\begin{verbatim}
+    # %% [markdown]
+# ## Predicting bike availability
+
+# %%
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+import functions.misc_functions as misc
+
+# %%
+df = pd.read_csv('data/dublinbikes_20200101_20200401.csv')
+# bike_station_1_df = df.
+addresses = df.ADDRESS.unique()
+# print(addresses)
+
+
+# %%
+lats = df.LATITUDE.unique()
+longs = df.LONGITUDE.unique()
+latlongs = np.column_stack((lats,longs))
+IDs = df['STATION ID'].unique()
+# IDs
+# latlongs
+
+# %% [markdown]
+# ## Plot of stations on map
+
+# %%
+misc.map_plot(img='map.png', title='Map of Dublin City Bikes', xlabel='Longitude', ylabel = 'Latitude',
+extents = [ -6.3101, -6.2309,53.3301, 53.36], lats=lats, longs=longs, labels = IDs)
+
+# %% [markdown]
+# note: positions are all a  bit off because it was difficult to get the area I wanted 
+
+# %%
+# print(min(lats))    # 53.3301
+# print(max(lats))    # 53.36
+# print(min(longs))   # -6.3101
+# print(max(longs))   # -6.2309
+
+# %%
+df1 = df[df['STATION ID'] == 97] # killmainham gaol
+df2 = df[df['STATION ID'] == 109] # beside connoly
+
+df1.drop(axis = 1, labels=['STATION ID', 'NAME', 'ADDRESS','LATITUDE','LONGITUDE', 'STATUS'],inplace=True)
+# df1.drop(df1.columns[0],axis = 1, inplace=True)
+df2.drop(axis = 1, labels=['STATION ID', 'NAME', 'ADDRESS','LATITUDE','LONGITUDE', 'STATUS'],inplace=True)
+# df2.drop(df2.columns[0],axis = 1, inplace=True)
+
+df1.to_csv('data/kilmainham.csv')
+df2.to_csv('data/buckingham.csv')
+
+# %%
+df1
+
+# %%
+df2
+
+# %%
+# time =  df1['TIME'].tolist()
+# time = range(0,len(time))
+# bikes = df1['AVAILABLE BIKES'].tolist()
+
+
+# %%
+# plot df1
+# time =  df1['TIME'].tolist()
+# plt.figure(figsize=(14,10))
+# plt.scatter(time, bikes)
+# plt.xlabel('Reading No')
+# plt.ylabel('No. Available Bikes')
+# plt.title('')
+
+
+
+\end{verbatim}
+
+\subsection{feature\_engineering.py}
+\begin{verbatim}
+    # %%
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+plt.rc('font', size=18); plt.rcParams['figure.constrained_layout.use'] = True
+import datetime
+import pylab
+import math
+import calendar
+import functions.misc_functions as misc
+from sklearn.preprocessing import OneHotEncoder
+
+# %%
+df1 = pd.read_csv('data/buckingham.csv', usecols=[1,5])
+
+df1['TIME'] = pd.to_datetime(df1['TIME'])
+
+
+# start = pd.to_datetime('2020-01-27')   # 2020-01-01 06:25:02. Data only reliable after 2020-01-26.
+# end = pd.to_datetime(str(max(df1.TIME)))     # 2020-04-01 23:55:02. 
+# start_date = start.date()
+# end_date = end.date()
+
+# t_start = pd.DatetimeIndex([start]).astype(np.int64)/1000000000
+# t_end = pd.DatetimeIndex([end]).astype(np.int64)/1000000000
+
+
+t_full=pd.array(pd.DatetimeIndex(df1.iloc[:,0]).astype(np.int64))/1000000000
+df1['T']=(t_full-t_full[0])/60/60/24 # convert timestamp to days
+df1['t'] = df1['T'].apply(lambda x: x%1)
+
+# df
+df1.drop(df1.loc[df1['T']<27].index, inplace=True)
+df1.drop(df1.loc[df1['T']>90].index, inplace=True)
+
+df1['WEEKDAY'] = pd.to_datetime(df1['TIME'])
+df1.WEEKDAY = df1.WEEKDAY.dt.strftime('%A')
+
+# df1['WEEKDAY'] = df1['WEEKDAY'].dt.dayofweek
+# t = np.extract([(t_full>=t_start) & (t_full<=t_end)], t_full)
+dt = t_full[1] - t_full[0]
+# print(f"sampling interval = {dt} seconds")
+
+# %%
+df1
+
+# %%
+# df1['t'] = df1['T'].apply(lambda x: x%1)
+# df1
+
+# %%
+df2 = pd.read_csv('data/kilmainham.csv', usecols=[1,5])
+
+
+start = pd.to_datetime(str(min(df2.TIME)))   # 2020-01-01 06:25:02. Data only reliable after 2020-01-26.
+end = pd.to_datetime(str(max(df2.TIME)))     # 2020-04-01 23:55:02. 
+start_date = start.date()
+end_date = end.date()
+
+t_start = pd.DatetimeIndex([start]).astype(np.int64)/1000000000
+t_end = pd.DatetimeIndex([end]).astype(np.int64)/1000000000
+
+
+t_full2=pd.array(pd.DatetimeIndex(df2.iloc[:,0]).astype(np.int64))/1000000000
+df2['T']=(t_full2-t_full2[0])/60/60/24 # convert timestamp to days
+df2['t'] = df2['T'].apply(lambda x: x % 1) # column that has a number that essentially equates to time.
+# It is skewed, 0 = 6am ish
+
+df2.drop(df2.loc[df2['T']<27].index, inplace=True)
+df2.drop(df2.loc[df2['T']>90].index, inplace=True)
+
+df2['WEEKDAY'] = pd.to_datetime(df2['TIME'])
+df2.WEEKDAY = df2.WEEKDAY.dt.strftime('%A') # get categories for onehot encoding
+# df2['WEEKDAY'] = df2['WEEKDAY'].dt.dayofweek
+# t = np.extract([(t_full>=t_start) & (t_full<=t_end)], t_full)
+dt = t_full[1] - t_full[0]
+# print(f"sampling interval = {dt} seconds")
+# df2['WEEKDAY'] = df2['WEEKDAY'].dt.dayofweek
+# x = misc.oneHot()
+
+
+# %% [markdown]
+# ### One-hot encode weekdays to stop some days from being preferred for no reason
+
+# %%
+# df2.append( pd.get_dummies(df2.WEEKDAY))
+x = pd.get_dummies(df1.WEEKDAY)
+df1 = pd.concat([df1, x], axis = 1)
+df1 = df1.drop(columns="WEEKDAY")
+x = pd.get_dummies(df2.WEEKDAY)
+df2 = pd.concat([df2, x], axis = 1)
+df2 = df2.drop(columns="WEEKDAY")
+
+
+# %% [markdown]
+# need to decide training data size/dates
+
+# %%
+df1
+
+# %%
+plt.figure('Buckingham')
+plt.scatter(df1['T'], df1['AVAILABLE BIKES'],marker='.')
+plt.title("Buckingham Street")
+plt.xlabel("Time (days)")
+plt.ylabel("Number of Available Bikes")
+# pylab.xlim(27, 90)
+
+plt.figure('Kilmainham')
+plt.scatter(df2['T'], df2['AVAILABLE BIKES'],marker='.')
+plt.title("Kilmainham Gaol")
+plt.xlabel("Time (days)")
+plt.ylabel("Number of Available Bikes")
+# pylab.xlim(0, 90)
+
+# %%
+day = 28  # simple way to find out how many datapoints are in one of the days.
+np.shape(df1.loc[(df1['T']<=day) & (df1['T']> day - 1)])
+
+
+# %%
+df1
+
+# %% [markdown]
+# ### 10 min ahead features
+
+# %%
+B10 = misc.make_features(periods = 2, dataframe=df1,col='AVAILABLE BIKES',name='B10')
+B15 = misc.make_features(periods = 3, dataframe=df1,col='AVAILABLE BIKES',name='B15')
+B20 = misc.make_features(periods = 4, dataframe=df1,col='AVAILABLE BIKES',name='B20')
+B25 = misc.make_features(periods = 5, dataframe=df1,col='AVAILABLE BIKES',name='B25')
+B30 = misc.make_features(periods = 6, dataframe=df1,col='AVAILABLE BIKES',name='B30')
+# five_before.reset_index(inplace = True)
+# five_before.drop(columns=['index'])
+DB1 = pd.DataFrame()
+DB1['DB1'] = B15['B15'] - B10['B10'] # difference between 15 mins and 10 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B20['B20'] - B15['B15'] # difference between 20 mins and 15 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+# print(DDB1DB2)
+temp = df1[['AVAILABLE BIKES','t', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']] # time and weekdays from dataframe
+temp.reset_index(inplace = True)
+
+ten_min_features = pd.concat([temp, B10, B15, B20, B25, B30, DB1, DB2,  DDB1DB2], axis = 1)
+
+
+
+ten_min_features = ten_min_features.iloc[6:, :]
+ten_min_features.drop(columns=['index'], inplace=True)
+
+ten_min_features.to_csv('data/ten_min.csv')
+# temp
+
+# %% [markdown]
+# ### 30 min ahead features
+
+# %%
+B30 = misc.make_features(periods = 6, dataframe=df1,col='AVAILABLE BIKES',name='B30')
+B35 = misc.make_features(periods = 7, dataframe=df1,col='AVAILABLE BIKES',name='B35')
+B40 = misc.make_features(periods = 8, dataframe=df1,col='AVAILABLE BIKES',name='B40')
+B45 = misc.make_features(periods = 9, dataframe=df1,col='AVAILABLE BIKES',name='B45')
+B50 = misc.make_features(periods = 10, dataframe=df1,col='AVAILABLE BIKES',name='B50')
+
+DB1 = pd.DataFrame()
+DB1['DB1'] = B35['B35'] - B30['B30'] # difference between 15 mins and 10 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B40['B40'] - B35['B35'] # difference between 20 mins and 15 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+
+thirty_min_features = pd.concat([temp, B30, B35, B40, B45, B50, DB1, DB2,  DDB1DB2], axis = 1)
+
+thirty_min_features = thirty_min_features.iloc[10:, :]
+thirty_min_features.drop(columns=['index'], inplace=True)
+
+thirty_min_features.to_csv('data/thirty_min.csv')
+
+# %% [markdown]
+# ### 60 min ahead features
+
+# %%
+B60 = misc.make_features(periods = 12, dataframe=df1,col='AVAILABLE BIKES',name='B60')
+B65 = misc.make_features(periods = 13, dataframe=df1,col='AVAILABLE BIKES',name='B65')
+B70 = misc.make_features(periods = 14, dataframe=df1,col='AVAILABLE BIKES',name='B70')
+B75 = misc.make_features(periods = 15, dataframe=df1,col='AVAILABLE BIKES',name='B75')
+B80 = misc.make_features(periods = 16, dataframe=df1,col='AVAILABLE BIKES',name='B80')
+
+DB1 = pd.DataFrame()
+DB1['DB1'] = B65['B65'] - B60['B60'] # difference between 65 mins and 60 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B70['B70'] - B65['B65'] # difference between 70 mins and 65 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+
+sixty_min_features = pd.concat([temp, B60, B65, B70, B75, B80, DB1, DB2,  DDB1DB2], axis = 1)
+
+sixty_min_features = sixty_min_features.iloc[16:, :]
+sixty_min_features.drop(columns=['index'], inplace=True)
+
+sixty_min_features.to_csv('data/sixty_min.csv')
+
+# %% [markdown]
+# ### Repeat for other dataset
+
+# %%
+B10 = misc.make_features(periods = 2, dataframe=df2,col='AVAILABLE BIKES',name='B10')
+B15 = misc.make_features(periods = 3, dataframe=df2,col='AVAILABLE BIKES',name='B15')
+B20 = misc.make_features(periods = 4, dataframe=df2,col='AVAILABLE BIKES',name='B20')
+B25 = misc.make_features(periods = 5, dataframe=df2,col='AVAILABLE BIKES',name='B25')
+B30 = misc.make_features(periods = 6, dataframe=df2,col='AVAILABLE BIKES',name='B30')
+# five_before.reset_index(inplace = True)
+# five_before.drop(columns=['index'])
+DB1 = pd.DataFrame()
+DB1['DB1'] = B15['B15'] - B10['B10'] # difference between 15 mins and 10 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B20['B20'] - B15['B15'] # difference between 20 mins and 15 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+# print(DDB1DB2)
+temp = df2[['AVAILABLE BIKES','t', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']] # time and weekdays from dataframe
+temp.reset_index(inplace = True)
+
+ten_min_features2 = pd.concat([temp, B10, B15, B20, B25, B30, DB1, DB2,  DDB1DB2], axis = 1)
+
+
+
+ten_min_features2 = ten_min_features2.iloc[6:, :]
+ten_min_features2.drop(columns=['index'], inplace=True)
+
+ten_min_features2.to_csv('data/ten_min_2.csv')
+# temp
+
+# %%
+B30 = misc.make_features(periods = 6, dataframe=df2,col='AVAILABLE BIKES',name='B30')
+B35 = misc.make_features(periods = 7, dataframe=df2,col='AVAILABLE BIKES',name='B35')
+B40 = misc.make_features(periods = 8, dataframe=df2,col='AVAILABLE BIKES',name='B40')
+B45 = misc.make_features(periods = 9, dataframe=df2,col='AVAILABLE BIKES',name='B45')
+B50 = misc.make_features(periods = 10, dataframe=df2,col='AVAILABLE BIKES',name='B50')
+
+DB1 = pd.DataFrame()
+DB1['DB1'] = B35['B35'] - B30['B30'] # difference between 15 mins and 10 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B40['B40'] - B35['B35'] # difference between 20 mins and 15 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+
+thirty_min_features2 = pd.concat([temp, B30, B35, B40, B45, B50, DB1, DB2,  DDB1DB2], axis = 1)
+
+thirty_min_features2 = thirty_min_features2.iloc[10:, :]
+thirty_min_features2.drop(columns=['index'], inplace=True)
+
+thirty_min_features2.to_csv('data/thirty_min_2.csv')
+
+# %%
+B60 = misc.make_features(periods = 12, dataframe=df2,col='AVAILABLE BIKES',name='B60')
+B65 = misc.make_features(periods = 13, dataframe=df2,col='AVAILABLE BIKES',name='B65')
+B70 = misc.make_features(periods = 14, dataframe=df2,col='AVAILABLE BIKES',name='B70')
+B75 = misc.make_features(periods = 15, dataframe=df2,col='AVAILABLE BIKES',name='B75')
+B80 = misc.make_features(periods = 16, dataframe=df2,col='AVAILABLE BIKES',name='B80')
+
+DB1 = pd.DataFrame()
+DB1['DB1'] = B65['B65'] - B60['B60'] # difference between 65 mins and 60 mins
+DB2 = pd.DataFrame()
+DB2['DB2'] = B70['B70'] - B65['B65'] # difference between 70 mins and 65 mins
+# print(DB2)
+DDB1DB2 = pd.DataFrame()
+DDB1DB2['DDB1DB2'] = DB2['DB2'] - DB1['DB1'] # 2nd derivative kinda
+
+sixty_min_features2 = pd.concat([temp, B60, B65, B70, B75, B80, DB1, DB2,  DDB1DB2], axis = 1)
+
+sixty_min_features2 = sixty_min_features2.iloc[16:, :]
+sixty_min_features2.drop(columns=['index'], inplace=True)
+
+sixty_min_features2.to_csv('data/sixty_min_2.csv')
+
+
+
+\end{verbatim}
+
+\subsection{ridge.py}
+
+\begin{verbatim}
+    # %%
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import KFold, train_test_split
+
+import functions.ml_functions as ml
+import functions.misc_functions as misc
+import functions.metrics as mtr
+import pylab
+
+# %% [markdown]
+# datasets with a 1 are buckingham street  
+# datasets with a 2 are kilmainham gaol
+
+# %%
+ten1 = pd.read_csv('data/ten_min.csv')
+ten2 = pd.read_csv('data/ten_min_2.csv')
+thirty1 = pd.read_csv('data/thirty_min.csv')
+thirty2 = pd.read_csv('data/thirty_min_2.csv')
+sixty1 = pd.read_csv('data/sixty_min.csv')
+sixty2 = pd.read_csv('data/sixty_min_2.csv')
+
+# %%
+df1 = ten1
+df2 = ten2
+df3 = thirty1
+df4 = thirty2
+df5 = sixty1
+df6 = sixty2
+
+# %%
+def stack_features(df:pd.DataFrame):
+    X1 = df.iloc[:, 2]
+    X2 = df.iloc[:, 3]
+    X3 = df.iloc[:, 4]
+    X4 = df.iloc[:, 5]
+    X5 = df.iloc[:, 6]
+    X6 = df.iloc[:, 7]
+    X7 = df.iloc[:,8]
+    X8 = df.iloc[:, 9]
+    X9 = df.iloc[:, 10]
+    X10 = df.iloc[:, 11]
+    X11 = df.iloc[:, 12]
+    X12 = df.iloc[:,13]
+    X13 = df.iloc[:, 14]
+    X14 = df.iloc[:, 15]
+    X15 = df.iloc[:,16]
+    X16 = df.iloc[:, 17]
+    X = np.column_stack((X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, X11, X12, X13, X14, X15, X16))
+
+    Y = df.iloc[:, 1]
+    return X, Y
+
+# %%
+X1, Y1 =stack_features(df1) 
+X2, Y2 = stack_features(df2)
+X3, Y3 =stack_features(df3) 
+X4, Y4 = stack_features(df4)
+X5, Y5 =stack_features(df5) 
+X6, Y6 = stack_features(df6)
+
+
+# %%
+# def train_Kfold_ridge(X_features, y_features, c_value):
+#     """
+#     Uses K-fold cross validation 
+#     Parameters
+#     ----------
+#     X_features : array 
+#         features
+#     y_features : array
+#         target features
+#     c_value : float
+#         parameter for training
+#     Returns
+#     ----------
+#     mean error : float
+#     standard error : float
+#     """
+#     kf = KFold(n_splits=5)
+#     model = Ridge(alpha=1/(2*c_value))
+#     errs = []
+#     # model = linear_model.Lasso(alpha=1/(2*c_value), max_iter=1000000000).fit()
+#     for train, test in kf.split(X_features):
+#         model.fit(X_features[train],y_features[train])
+#         ypred = model.predict(X_features[test])
+#         from sklearn.metrics import mean_squared_error
+#         # print("square error %f"%(mean_squared_error(y_features[test],ypred)))
+#         errs.append(mean_squared_error(y_features[test],ypred))
+#     # print(np.mean(errs))
+#     return np.mean(errs), np.std(errs)
+
+# %%
+alphas = np.linspace(0.00000000001, 10000,num=50)
+ml.Kfold_for_alpha_ridge(X1, Y1, alphas,'K-fold Cross Validation for Buckingham Street (10 mins in future)')
+ml.Kfold_for_alpha_ridge(X2, Y2, alphas,'K-fold Cross Validation for Kilmainham Gaol (10 mins in future)')
+ml.Kfold_for_alpha_ridge(X3, Y3, alphas,'K-fold Cross Validation for Buckingham Street (30 mins in future)')
+ml.Kfold_for_alpha_ridge(X4, Y4, alphas,'K-fold Cross Validation for Kilmainham Gaol (30 mins in future)')
+ml.Kfold_for_alpha_ridge(X5, Y5, alphas,'K-fold Cross Validation for Buckingham Street (60 mins in future)')
+ml.Kfold_for_alpha_ridge(X6, Y6, alphas,'K-fold Cross Validation for Kilmainham Gaol (60 mins in future)')
+
+# %% [markdown]
+# minimised by (around) 1 for all
+
+# %% [markdown]
+# It seems like they all have more or less the exact same curve  - this was a bug  
+# when looking closer the further into the future values will undoubtedly have worse performance
+
+# %% [markdown]
+# I now feel that I can use the same model for all 6 datasets,  
+# Changing alpha has minimal difference
+
+# %%
+X1_train, X1_test, y1_train, y1_test = train_test_split(X1, Y1, test_size=0.3, random_state=42)
+X2_train, X2_test, y2_train, y2_test = train_test_split(X2, Y2, test_size=0.3, random_state=42)
+X3_train, X3_test, y3_train, y3_test = train_test_split(X3, Y3, test_size=0.3, random_state=42)
+X4_train, X4_test, y4_train, y4_test = train_test_split(X4, Y4, test_size=0.3, random_state=42)
+X5_train, X5_test, y5_train, y5_test = train_test_split(X5, Y5, test_size=0.3, random_state=42)
+X6_train, X6_test, y6_train, y6_test = train_test_split(X6, Y6, test_size=0.3, random_state=42)
+
+# %%
+model1 = Ridge(alpha=1).fit(X1_train,y1_train)
+predictions1 = ml.generate_predictions(model1, X1_test)
+mse1 = mtr.calculate_mse(predictions1,y1_test)
+r21 = mtr.calculate_R2(predictions1,y1_test)
+train_predictions1 = ml.generate_predictions(model1, X1_train)
+train_mse1 = mtr.calculate_mse(train_predictions1,y1_train)
+
+model2 = Ridge(alpha=1).fit(X2_train,y2_train)
+predictions2 = ml.generate_predictions(model2, X2_test)
+mse2 = mtr.calculate_mse(predictions2,y2_test)
+r22 = mtr.calculate_R2(predictions2,y2_test)
+train_predictions2 = ml.generate_predictions(model2, X2_train)
+train_mse2 = mtr.calculate_mse(train_predictions2,y2_train)
+
+model3 = Ridge(alpha=1).fit(X3_train,y3_train)
+predictions3 = ml.generate_predictions(model3, X3_test)
+mse3 = mtr.calculate_mse(predictions3,y3_test)
+r23 = mtr.calculate_R2(predictions3,y3_test)
+train_predictions3 = ml.generate_predictions(model3, X3_train)
+train_mse3 = mtr.calculate_mse(train_predictions3,y3_train)
+
+model4 = Ridge(alpha=1).fit(X4_train,y4_train)
+predictions4 = ml.generate_predictions(model4, X4_test)
+mse4 = mtr.calculate_mse(predictions4,y4_test)
+r24 = mtr.calculate_R2(predictions4,y4_test)
+train_predictions4 = ml.generate_predictions(model4, X4_train)
+train_mse4 = mtr.calculate_mse(train_predictions4,y4_train)
+
+model5 = Ridge(alpha=1).fit(X5_train,y5_train)
+predictions5 = ml.generate_predictions(model5, X5_test)
+mse5 = mtr.calculate_mse(predictions5,y5_test)
+r25 = mtr.calculate_R2(predictions5,y5_test)
+train_predictions5 = ml.generate_predictions(model5, X5_train)
+train_mse5 = mtr.calculate_mse(train_predictions5,y5_train)
+
+model6 = Ridge(alpha=1).fit(X6_train,y6_train)
+predictions6 = ml.generate_predictions(model6, X6_test)
+mse6 = mtr.calculate_mse(predictions6,y6_test)
+r26 = mtr.calculate_R2(predictions6,y6_test)
+train_predictions6 = ml.generate_predictions(model6, X6_train)
+train_mse6 = mtr.calculate_mse(train_predictions6,y6_train)
+
+# %%
+train_mse1
+
+# %%
+print(f"mse 1: {mse1}, training mse = {train_mse1}, r_2 = {r21}")
+print(f"mse 2: {mse2}, training mse = {train_mse2}, r_2 = {r22}")
+print(f"mse 3: {mse3}, training mse = {train_mse3}, r_2 = {r23}")
+print(f"mse 4: {mse4}, training mse = {train_mse4}, r_2 = {r24}")
+print(f"mse 5: {mse5}, training mse = {train_mse5}, r_2 = {r25}")
+print(f"mse 6: {mse6}, training mse = {train_mse6}, r_2 = {r26}")
+
+
+# %% [markdown]
+# Dummy Predictor should just be the most recent value
+
+# %%
+dummy_preds_1 = X1_test[:,8]
+dummy_mse_1 = mtr.calculate_mse(dummy_preds_1,y1_test)
+dummy_r21 = mtr.calculate_R2(dummy_preds_1,y1_test)
+dummy_preds_2 = X2_test[:,8]
+dummy_mse_2 = mtr.calculate_mse(dummy_preds_2,y2_test)
+dummy_r22 = mtr.calculate_R2(dummy_preds_2,y2_test)
+dummy_preds_3 = X3_test[:,8]
+dummy_mse_3 = mtr.calculate_mse(dummy_preds_3,y3_test)
+dummy_r23 = mtr.calculate_R2(dummy_preds_3,y3_test)
+dummy_preds_4 = X4_test[:,8]
+dummy_mse_4 = mtr.calculate_mse(dummy_preds_4,y4_test)
+dummy_r24 = mtr.calculate_R2(dummy_preds_4,y4_test)
+dummy_preds_5 = X5_test[:,8]
+dummy_mse_5 = mtr.calculate_mse(dummy_preds_5,y5_test)
+dummy_r25 = mtr.calculate_R2(dummy_preds_5,y5_test)
+dummy_preds_6 = X6_test[:,8]
+dummy_mse_6 = mtr.calculate_mse(dummy_preds_6,y6_test)
+dummy_r26 = mtr.calculate_R2(dummy_preds_6,y6_test)
+
+# %%
+data1 = {'10 minutes':mse1, '30 minutes':mse3, '60 minutes':mse5}
+data2 = {'dummy 10':dummy_mse_1, 'dummy 30':dummy_mse_3, 'dummy 60':dummy_mse_5}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.4)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.4)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Buckingham Street)")
+plt.show()
+
+# %%
+data1 = {'10 minutes':mse2, '30 minutes':mse4, '60 minutes':mse4}
+data2 = {'dummy 10':dummy_mse_2, 'dummy 30':dummy_mse_4, 'dummy 60':dummy_mse_6}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.4)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.4)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Kilmainham Gaol)")
+plt.show()
+
+# %%
+x = range(len(y1_test))
+plt.figure("Predictions")
+plt.scatter(x,y1_test, label= 'true values', )
+plt.scatter(x,predictions1, label= 'predictions', alpha = 0.8)
+plt.title('Predictions and True Values (data is shuffled)')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 50)
+plt.legend()
+
+# %%
+plt.figure('preds1')
+preds = ml.generate_predictions(model1, X1)
+x = range(len(preds))
+plt.scatter(x,Y1, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (10 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds2')
+preds = ml.generate_predictions(model2, X2)
+x = range(len(preds))
+plt.scatter(x,Y2, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (10 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds3')
+preds = ml.generate_predictions(model3, X3)
+x = range(len(preds))
+plt.scatter(x,Y3, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (30 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds4')
+preds = ml.generate_predictions(model4, X4)
+x = range(len(preds))
+plt.scatter(x,Y4, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (30 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds5')
+preds = ml.generate_predictions(model5, X5)
+x = range(len(preds))
+plt.scatter(x,Y5, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (60 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds6')
+preds = ml.generate_predictions(model6, X6)
+x = range(len(preds))
+plt.scatter(x,Y6, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (60 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+# %% [markdown]
+# ### Redo with polynomial features.
+
+# %%
+polyX1 = misc.make_poly_data(X1, 2)
+polyX2 = misc.make_poly_data(X2, 2)
+polyX3 = misc.make_poly_data(X3, 2)
+polyX4 = misc.make_poly_data(X4, 2)
+polyX5 = misc.make_poly_data(X5, 2)
+polyX6 = misc.make_poly_data(X6, 2)
+
+# %%
+X1_train, X1_test, y1_train, y1_test = train_test_split(polyX1, Y1, test_size=0.3, random_state=42)
+X2_train, X2_test, y2_train, y2_test = train_test_split(polyX2, Y2, test_size=0.3, random_state=42)
+X3_train, X3_test, y3_train, y3_test = train_test_split(polyX3, Y3, test_size=0.3, random_state=42)
+X4_train, X4_test, y4_train, y4_test = train_test_split(polyX4, Y4, test_size=0.3, random_state=42)
+X5_train, X5_test, y5_train, y5_test = train_test_split(polyX5, Y5, test_size=0.3, random_state=42)
+X6_train, X6_test, y6_train, y6_test = train_test_split(polyX6, Y6, test_size=0.3, random_state=42)
+
+# %%
+alphas = np.linspace(0.00000000001, 1000,num=25)
+ml.Kfold_for_alpha_ridge(polyX1,Y1,alphas, 'K-fold Cross Validation for Buckingham Street (10 mins in future)')
+
+ml.Kfold_for_alpha_ridge(polyX2,Y2,alphas, 'K-fold Cross Validation for Kilmainham Gaol (10 mins in future)')
+
+ml.Kfold_for_alpha_ridge(polyX3,Y3,alphas, 'K-fold Cross Validation for Buckingham Street (30 mins in future)')
+
+ml.Kfold_for_alpha_ridge(polyX4,Y4,alphas, 'K-fold Cross Validation for Kilmainham Gaol (30 mins in future)')
+
+ml.Kfold_for_alpha_ridge(polyX5,Y5,alphas, 'K-fold Cross Validation for Buckingham Street (60 mins in future)')
+
+ml.Kfold_for_alpha_ridge(polyX6,Y6,alphas, 'K-fold Cross Validation for Kilmainham Gaol (60 mins in future)')
+
+# %%
+poly_model1 = Ridge(alpha=1).fit(X1_train,y1_train)
+poly_predictions1 = ml.generate_predictions(poly_model1, X1_test)
+poly_mse1 = mtr.calculate_mse(predictions1,y1_test)
+poly_train_predictions1 = ml.generate_predictions(poly_model1, X1_train)
+poly_train_mse1 = mtr.calculate_mse(train_predictions1,y1_train)
+
+poly_model2 = Ridge(alpha=1).fit(X2_train,y2_train)
+poly_predictions2 = ml.generate_predictions(poly_model2, X2_test)
+poly_mse2 = mtr.calculate_mse(predictions2,y2_test)
+poly_train_predictions2 = ml.generate_predictions(poly_model2, X2_train)
+poly_train_mse2 = mtr.calculate_mse(train_predictions2,y2_train)
+
+poly_model3 = Ridge(alpha=1).fit(X3_train,y3_train)
+poly_predictions3 = ml.generate_predictions(poly_model3, X3_test)
+poly_mse3 = mtr.calculate_mse(predictions3,y3_test)
+poly_train_predictions3 = ml.generate_predictions(poly_model3, X3_train)
+poly_train_mse3 = mtr.calculate_mse(train_predictions3,y3_train)
+
+poly_model4 = Ridge(alpha=1).fit(X4_train,y4_train)
+poly_predictions4= ml.generate_predictions(poly_model4, X4_test)
+poly_mse4 = mtr.calculate_mse(predictions4,y4_test)
+poly_train_predictions4 = ml.generate_predictions(poly_model4, X4_train)
+poly_train_mse4 = mtr.calculate_mse(train_predictions4,y4_train)
+
+poly_model5 = Ridge(alpha=1).fit(X5_train,y5_train)
+poly_predictions5= ml.generate_predictions(poly_model5, X5_test)
+poly_mse5 = mtr.calculate_mse(predictions5,y5_test)
+poly_train_predictions5 = ml.generate_predictions(poly_model5, X5_train)
+poly_train_mse5 = mtr.calculate_mse(train_predictions5,y5_train)
+
+poly_model6 = Ridge(alpha=1).fit(X6_train,y6_train)
+poly_predictions6= ml.generate_predictions(poly_model6, X6_test)
+poly_mse6 = mtr.calculate_mse(predictions6,y6_test)
+poly_train_predictions6 = ml.generate_predictions(poly_model6, X6_train)
+poly_train_mse6 = mtr.calculate_mse(train_predictions6,y6_train)
+
+# %%
+data1 = {'10 minutes':mse1, '30 minutes':mse3, '60 minutes':mse5}
+data2 = {'Poly 10':poly_mse1, 'Poly 30':poly_mse3, 'Poly 60':poly_mse5}
+data3 = {'dummy 10':dummy_mse_1, 'dummy 30':dummy_mse_3, 'dummy 60':dummy_mse_5}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+keys3 = list(data3.keys())
+values3 = list(data3.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='red',
+        width = 0.9)
+
+plt.bar(keys3, values3, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Buckingham Street)")
+plt.rc('font', size=10)
+plt.show()
+
+
+# %%
+data1 = {'10 minutes':mse2, '30 minutes':mse4, '60 minutes':mse6}
+data2 = {'Poly 10':poly_mse2, 'Poly 30':poly_mse4, 'Poly 60':poly_mse6}
+data3 = {'dummy 10':dummy_mse_2, 'dummy 30':dummy_mse_4, 'dummy 60':dummy_mse_6}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+keys3 = list(data3.keys())
+values3 = list(data3.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='red',
+        width = 0.9)
+
+plt.bar(keys3, values3, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Kilmainham Gaol)")
+
+plt.show()
+
+# %% [markdown]
+# bar chart of coefficients
+
+# %%
+# model1.coef_
+len(poly_model1.coef_)
+
+# %%
+data = {'t':model1.coef_[0], 'Monday':model1.coef_[1], 'Tuesday':model1.coef_[2], 'Wednesday':model1.coef_[3], 'Thursday':model1.coef_[4],
+'Friday':model1.coef_[5], 'Saturday':model1.coef_[6], 'Sunday':model1.coef_[7], 'B10':model1.coef_[8],'B15':model1.coef_[9], 'B20':model1.coef_[10],
+'B25':model1.coef_[11], 'B30':model1.coef_[12], 'DB1':model1.coef_[13], 'DB2':model1.coef_[14], 'DDB1DB2':model1.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nBuckingham Street (10 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+# %%
+data = {'t':model2.coef_[0], 'Monday':model2.coef_[1], 'Tuesday':model2.coef_[2], 'Wednesday':model2.coef_[3], 'Thursday':model2.coef_[4],
+'Friday':model2.coef_[5], 'Saturday':model2.coef_[6], 'Sunday':model2.coef_[7], 'B10':model2.coef_[8],'B15':model2.coef_[9], 'B20':model2.coef_[10],
+'B25':model2.coef_[11], 'B30':model2.coef_[12], 'DB1':model2.coef_[13], 'DB2':model2.coef_[14], 'DDB1DB2':model2.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nKilmainham Gaol (10 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+# %%
+data = {'t':model3.coef_[0], 'Monday':model3.coef_[3], 'Tuesday':model3.coef_[2], 'Wednesday':model3.coef_[3], 'Thursday':model3.coef_[4],
+'Friday':model3.coef_[5], 'Saturday':model3.coef_[6], 'Sunday':model3.coef_[7], 'B30':model3.coef_[8],'B35':model3.coef_[9], 'B20':model3.coef_[10],
+'B25':model3.coef_[11], 'B30':model3.coef_[12], 'DB3':model3.coef_[13], 'DB2':model3.coef_[14], 'DDB1DB2':model3.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nBuckingham Street (30 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+# %%
+data = {'t':model4.coef_[0], 'Monday':model4.coef_[3], 'Tuesday':model4.coef_[2], 'Wednesday':model4.coef_[3], 'Thursday':model4.coef_[4],
+'Friday':model4.coef_[5], 'Saturday':model4.coef_[6], 'Sunday':model4.coef_[7], 'B30':model4.coef_[8],'B35':model4.coef_[9], 'B20':model4.coef_[10],
+'B25':model4.coef_[11], 'B30':model4.coef_[12], 'DB3':model4.coef_[13], 'DB2':model4.coef_[14], 'DDB1DB2':model4.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nKilmainham Gaol (30 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+# %%
+data = {'t':model5.coef_[0], 'Monday':model5.coef_[3], 'Tuesday':model5.coef_[2], 'Wednesday':model5.coef_[3], 'Thursday':model5.coef_[4],
+'Friday':model5.coef_[5], 'Saturday':model5.coef_[6], 'Sunday':model5.coef_[7], 'B30':model5.coef_[8],'B35':model5.coef_[9], 'B20':model5.coef_[10],
+'B25':model5.coef_[11], 'B30':model5.coef_[12], 'DB3':model5.coef_[13], 'DB2':model5.coef_[14], 'DDB1DB2':model5.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nBuckingham Street (60 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+# %%
+data = {'t':model6.coef_[0], 'Monday':model6.coef_[3], 'Tuesday':model6.coef_[2], 'Wednesday':model6.coef_[3], 'Thursday':model6.coef_[4],
+'Friday':model6.coef_[5], 'Saturday':model6.coef_[6], 'Sunday':model6.coef_[7], 'B30':model6.coef_[8],'B35':model6.coef_[9], 'B20':model6.coef_[10],
+'B25':model6.coef_[11], 'B30':model6.coef_[12], 'DB3':model6.coef_[13], 'DB2':model6.coef_[14], 'DDB1DB2':model6.coef_[15]}
+
+fig = plt.figure(figsize = (15, 5))
+ 
+# creating the bar plot
+plt.bar(list(data.keys()), list(data.values()),
+        width = 0.9)
+
+plt.title('Coefficients for Ridge Model\nKilmainham Gaol (60 minutes)')
+plt.xlabel('Feature')
+plt.ylabel('Weight')
+plt.rc('font', size=10)
+
+
+
+\end{verbatim}
+
+\subsection{kneighbors.py}
+\begin{verbatim}
+    # %% [markdown]
+# # K Neighbours regression to predict bike availability
+
+# %%
+import matplotlib.pyplot as plt
+import pylab
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import KFold, train_test_split
+from sklearn.neighbors import KNeighborsRegressor
+
+import functions.ml_functions as ml
+import functions.misc_functions as misc
+import functions.metrics as mtr
+
+# %%
+ten1 = pd.read_csv('data/ten_min.csv')
+ten2 = pd.read_csv('data/ten_min_2.csv')
+thirty1 = pd.read_csv('data/thirty_min.csv')
+thirty2 = pd.read_csv('data/thirty_min_2.csv')
+sixty1 = pd.read_csv('data/sixty_min.csv')
+sixty2 = pd.read_csv('data/sixty_min_2.csv')
+
+# %%
+df1 = ten1
+df2 = ten2
+df3 = thirty1
+df4 = thirty2
+df5 = sixty1
+df6 = sixty2
+
+# %%
+df1
+
+# %%
+def stack_features(df:pd.DataFrame):
+    X1 = df.iloc[:, 2]
+    X2 = df.iloc[:, 3]
+    X3 = df.iloc[:, 4]
+    X4 = df.iloc[:, 5]
+    X5 = df.iloc[:, 6]
+    X6 = df.iloc[:, 7]
+    X7 = df.iloc[:,8]
+    X8 = df.iloc[:, 9]
+    X9 = df.iloc[:, 10]
+    X10 = df.iloc[:, 11]
+    X11 = df.iloc[:, 12]
+    X12 = df.iloc[:,13]
+    X13 = df.iloc[:, 14]
+    X14 = df.iloc[:, 15]
+    X15 = df.iloc[:,16]
+    X16 = df.iloc[:, 17]
+    X = np.column_stack((X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, X11, X12, X13, X14, X15, X16))
+
+    Y = df.iloc[:, 1]
+    return X, Y
+
+# %%
+X1, Y1 =stack_features(df1) 
+X2, Y2 = stack_features(df2)
+X3, Y3 =stack_features(df3) 
+X4, Y4 = stack_features(df4)
+X5, Y5 =stack_features(df5) 
+X6, Y6 = stack_features(df6)
+
+
+# %%
+X1_train, X1_test, y1_train, y1_test = train_test_split(X1, Y1, test_size=0.3, random_state=42)
+X2_train, X2_test, y2_train, y2_test = train_test_split(X2, Y2, test_size=0.3, random_state=42)
+X3_train, X3_test, y3_train, y3_test = train_test_split(X3, Y3, test_size=0.3, random_state=42)
+X4_train, X4_test, y4_train, y4_test = train_test_split(X4, Y4, test_size=0.3, random_state=42)
+X5_train, X5_test, y5_train, y5_test = train_test_split(X5, Y5, test_size=0.3, random_state=42)
+X6_train, X6_test, y6_train, y6_test = train_test_split(X6, Y6, test_size=0.3, random_state=42)
+
+# %%
+def Kfold_for_n_neighbours(X_features, y_features, n_range, title:str):
+
+
+    error_array = np.zeros(len(n_range))
+    std_dev_array = np.zeros(len(n_range))
+    for i in range(len(n_range)):
+        # print("\n\n C = %f"%(C_range[i]))
+        model = KNeighborsRegressor(n_neighbors=n_range[i]).fit(X_features, y_features)
+        kf = KFold(n_splits=5)
+        errs = []
+
+        for train, test in kf.split(X_features):
+            model.fit(X_features[train],y_features[train])
+            ypred = model.predict(X_features[test])
+            from sklearn.metrics import mean_squared_error
+            # print("square error %f"%(mean_squared_error(y_features[test],ypred)))
+            errs.append(mean_squared_error(y_features[test],ypred))
+        
+        error_array[i] = np.mean(errs)
+        std_dev_array[i] = np.std(errs)
+
+    # print(error_array)
+
+    plt.figure(title)
+    plt.errorbar(n_range, error_array, yerr=std_dev_array)
+    plt.xlabel('No Neighbors')
+    plt.ylabel('Mean Squared Error')
+    plt.title(title)
+    # x = np.arange(len(error_array))
+    # plt.bar(x, C_range, error_array)
+
+# %%
+def Kfold_for_leaf_size(X_features, y_features, leaf_range, title:str):
+
+
+    error_array = np.zeros(len(leaf_range))
+    std_dev_array = np.zeros(len(leaf_range))
+    for i in range(len(leaf_range)):
+        # print("\n\n C = %f"%(C_range[i]))
+        model = KNeighborsRegressor(leaf_size=leaf_range[i]).fit(X_features, y_features)
+        kf = KFold(n_splits=5)
+        errs = []
+
+        for train, test in kf.split(X_features):
+            model.fit(X_features[train],y_features[train])
+            ypred = model.predict(X_features[test])
+            from sklearn.metrics import mean_squared_error
+            # print("square error %f"%(mean_squared_error(y_features[test],ypred)))
+            errs.append(mean_squared_error(y_features[test],ypred))
+        
+        error_array[i] = np.mean(errs)
+        std_dev_array[i] = np.std(errs)
+
+    # print(error_array)
+
+    plt.figure(title)
+    plt.errorbar(leaf_range, error_array, yerr=std_dev_array)
+    plt.xlabel('Leaf Size')
+    plt.ylabel('Mean Squared Error')
+    plt.title(title)
+    # x = np.arange(len(error_array))
+    # plt.bar(x, C_range, error_array)
+
+# %%
+def Kfold_for_p(X_features, y_features, p_range, title:str):
+
+
+    error_array = np.zeros(len(p_range))
+    std_dev_array = np.zeros(len(p_range))
+    for i in range(len(p_range)):
+        # print("\n\n C = %f"%(C_range[i]))
+        model = KNeighborsRegressor(p=p_range[i]).fit(X_features, y_features)
+        kf = KFold(n_splits=5)
+        errs = []
+
+        for train, test in kf.split(X_features):
+            model.fit(X_features[train],y_features[train])
+            ypred = model.predict(X_features[test])
+            from sklearn.metrics import mean_squared_error
+            # print("square error %f"%(mean_squared_error(y_features[test],ypred)))
+            errs.append(mean_squared_error(y_features[test],ypred))
+        
+        error_array[i] = np.mean(errs)
+        std_dev_array[i] = np.std(errs)
+
+    # print(error_array)
+
+    plt.figure(title)
+    plt.errorbar(p_range, error_array, yerr=std_dev_array)
+    plt.xlabel('p value')
+    plt.ylabel('Mean Squared Error')
+    plt.title(title)
+    # x = np.arange(len(error_array))
+    # plt.bar(x, C_range, error_array)
+
+# %%
+model1 = KNeighborsRegressor().fit(X1_train,y1_train)
+predictions1 = ml.generate_predictions(model1, X1_test)
+mse1 = mtr.calculate_mse(predictions1,y1_test)
+r21 = mtr.calculate_R2(predictions1,y1_test)
+train_predictions1 = ml.generate_predictions(model1, X1_train)
+train_mse1 = mtr.calculate_mse(train_predictions1,y1_train)
+
+# %%
+ns = range(1,30)
+Kfold_for_n_neighbours(X1, Y1, ns, title = '5-Fold Cross validation\n10 minutes, Buckingham Street')
+Kfold_for_n_neighbours(X2, Y2, ns, title = '5-Fold Cross validation\n10 minutes, Kilmainham Gaol')
+Kfold_for_n_neighbours(X3, Y3, ns, title = '5-Fold Cross validation\n30 minutes, Buckingham Street')
+Kfold_for_n_neighbours(X4, Y4, ns, title = '5-Fold Cross validation\n30 minutes, Kilmainham Gaol')
+Kfold_for_n_neighbours(X5, Y5, ns, title = '5-Fold Cross validation\n60 minutes, Buckingham Street')
+Kfold_for_n_neighbours(X6, Y6, ns, title = '5-Fold Cross validation\n60 minutes, Kilmainham Gaol')
+
+# %%
+# leafs = range(10,200,10)
+# Kfold_for_leaf_size(X1, Y1, leafs, title = '5-Fold Cross validation\n10 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X2, Y2, leafs, title = '5-Fold Cross validation\n10 minutes, Kilmainham Gaol')
+# Kfold_for_leaf_size(X3, Y3, leafs, title = '5-Fold Cross validation\n30 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X4, Y4, leafs, title = '5-Fold Cross validation\n30 minutes, Kilmainham Gaol')
+# Kfold_for_leaf_size(X5, Y5, leafs, title = '5-Fold Cross validation\n60 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X6, Y6, leafs, title = '5-Fold Cross validation\n60 minutes, Kilmainham Gaol')
+
+# %%
+# ps = range(1,20)
+# Kfold_for_leaf_size(X1, Y1, ps, title = '5-Fold Cross validation\n10 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X2, Y2, ps, title = '5-Fold Cross validation\n10 minutes, Kilmainham Gaol')
+# Kfold_for_leaf_size(X3, Y3, ps, title = '5-Fold Cross validation\n30 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X4, Y4, ps, title = '5-Fold Cross validation\n30 minutes, Kilmainham Gaol')
+# Kfold_for_leaf_size(X5, Y5, ps, title = '5-Fold Cross validation\n60 minutes, Buckingham Street')
+# Kfold_for_leaf_size(X6, Y6, ps, title = '5-Fold Cross validation\n60 minutes, Kilmainham Gaol')
+
+# %%
+n = 10
+
+model1 = KNeighborsRegressor(n_neighbors=n).fit(X1_train,y1_train)
+predictions1 = ml.generate_predictions(model1, X1_test)
+mse1 = mtr.calculate_mse(predictions1,y1_test)
+train_predictions1 = ml.generate_predictions(model1, X1_train)
+train_mse1 = mtr.calculate_mse(train_predictions1,y1_train)
+
+model2 = KNeighborsRegressor(n_neighbors=n).fit(X2_train,y2_train)
+predictions2 = ml.generate_predictions(model2, X2_test)
+mse2 = mtr.calculate_mse(predictions2,y2_test)
+train_predictions2 = ml.generate_predictions(model2, X2_train)
+train_mse2 = mtr.calculate_mse(train_predictions2,y2_train)
+
+model3 = KNeighborsRegressor(n_neighbors=n).fit(X3_train,y3_train)
+predictions3 = ml.generate_predictions(model3, X3_test)
+mse3 = mtr.calculate_mse(predictions3,y3_test)
+train_predictions3 = ml.generate_predictions(model3, X3_train)
+train_mse3 = mtr.calculate_mse(train_predictions3,y3_train)
+
+model4 = KNeighborsRegressor(n_neighbors=n).fit(X4_train,y4_train)
+predictions4 = ml.generate_predictions(model4, X4_test)
+mse4 = mtr.calculate_mse(predictions4,y4_test)
+train_predictions4 = ml.generate_predictions(model4, X4_train)
+train_mse4 = mtr.calculate_mse(train_predictions4,y4_train)
+
+model5 = KNeighborsRegressor(n_neighbors=n).fit(X5_train,y5_train)
+predictions5 = ml.generate_predictions(model5, X5_test)
+mse5 = mtr.calculate_mse(predictions5,y5_test)
+train_predictions5 = ml.generate_predictions(model5, X5_train)
+train_mse5 = mtr.calculate_mse(train_predictions5,y5_train)
+
+model6 = KNeighborsRegressor(n_neighbors=n).fit(X6_train,y6_train)
+predictions6 = ml.generate_predictions(model6, X6_test)
+mse6 = mtr.calculate_mse(predictions6,y6_test)
+train_predictions6 = ml.generate_predictions(model6, X6_train)
+train_mse6 = mtr.calculate_mse(train_predictions6,y6_train)
+
+# %%
+print(f"mse 1: {mse1}, training mse = {train_mse1}")
+print(f"mse 2: {mse2}, training mse = {train_mse2}")
+print(f"mse 3: {mse3}, training mse = {train_mse3}")
+print(f"mse 4: {mse4}, training mse = {train_mse4}")
+print(f"mse 5: {mse5}, training mse = {train_mse5}")
+print(f"mse 6: {mse6}, training mse = {train_mse6}")
+
+# %%
+dummy_preds_1 = X1_test[:,8]
+dummy_mse_1 = mtr.calculate_mse(dummy_preds_1,y1_test)
+dummy_r21 = mtr.calculate_R2(dummy_preds_1,y1_test)
+dummy_preds_2 = X2_test[:,8]
+dummy_mse_2 = mtr.calculate_mse(dummy_preds_2,y2_test)
+dummy_r22 = mtr.calculate_R2(dummy_preds_2,y2_test)
+dummy_preds_3 = X3_test[:,8]
+dummy_mse_3 = mtr.calculate_mse(dummy_preds_3,y3_test)
+dummy_r23 = mtr.calculate_R2(dummy_preds_3,y3_test)
+dummy_preds_4 = X4_test[:,8]
+dummy_mse_4 = mtr.calculate_mse(dummy_preds_4,y4_test)
+dummy_r24 = mtr.calculate_R2(dummy_preds_4,y4_test)
+dummy_preds_5 = X5_test[:,8]
+dummy_mse_5 = mtr.calculate_mse(dummy_preds_5,y5_test)
+dummy_r25 = mtr.calculate_R2(dummy_preds_5,y5_test)
+dummy_preds_6 = X6_test[:,8]
+dummy_mse_6 = mtr.calculate_mse(dummy_preds_6,y6_test)
+dummy_r26 = mtr.calculate_R2(dummy_preds_6,y6_test)
+
+# %%
+data1 = {'10 minutes':mse1, '30 minutes':mse3, '60 minutes':mse5}
+data2 = {'dummy 10':dummy_mse_1, 'dummy 30':dummy_mse_3, 'dummy 60':dummy_mse_5}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Buckingham Street)")
+plt.show()
+
+# %%
+data1 = {'10 minutes':mse2, '30 minutes':mse4, '60 minutes':mse6}
+data2 = {'dummy 10':dummy_mse_2, 'dummy 30':dummy_mse_4, 'dummy 60':dummy_mse_6}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Kilmainham Gaol)")
+plt.show()
+
+# %%
+plt.figure('preds1')
+preds = ml.generate_predictions(model1, X1)
+x = range(len(preds))
+plt.scatter(x,Y1, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (10 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds2')
+preds = ml.generate_predictions(model2, X2)
+x = range(len(preds))
+plt.scatter(x,Y2, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (10 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds3')
+preds = ml.generate_predictions(model3, X3)
+x = range(len(preds))
+plt.scatter(x,Y3, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (30 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds4')
+preds = ml.generate_predictions(model4, X4)
+x = range(len(preds))
+plt.scatter(x,Y4, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (30 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds5')
+preds = ml.generate_predictions(model5, X5)
+x = range(len(preds))
+plt.scatter(x,Y5, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (60 minutes ahead)\nBuckingham Street')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+plt.figure('preds6')
+preds = ml.generate_predictions(model6, X6)
+x = range(len(preds))
+plt.scatter(x,Y6, label= 'true values', marker = '.' )
+plt.scatter(x,preds, label= 'predictions', alpha = 0.8, marker = '.')
+plt.title('Predictions and True Values (60 minutes ahead)\nKilmainham Gaol')
+plt.xlabel('Entry Number')
+plt.ylabel('Number of bikes')
+pylab.xlim(0, 1000)
+plt.legend()
+
+# %%
+data1 = {'KN 10':mse1, 'KN 30':mse3, 'KN 60':mse5}
+data2 = {'Ridge 10':0.778038465888961, 'Ridge 30':2.8980902949976604, 'Ridge 60':7.206380333828185}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Buckingham Street)\n for K Neighbors and Ridge")
+plt.show()
+
+# %%
+data1 = {'KN 10':mse2, 'KN 30':mse4, 'KN 60':mse6}
+data2 = {'Ridge 10':1.2274603642388036, 'Ridge 30':5.009085323957655, 'Ridge 60':12.814869517454902}
+keys1 = list(data1.keys())
+values1 = list(data1.values())
+keys2 = list(data2.keys())
+values2 = list(data2.values())
+  
+fig = plt.figure(figsize = (10, 5))
+ 
+# creating the bar plot
+plt.bar(keys1, values1, color ='blue',
+        width = 0.9)
+
+plt.bar(keys2, values2, color ='green',
+        width = 0.9)
+
+plt.xlabel("Time in future")
+plt.ylabel("Mean Squared Error")
+plt.title("Mean Squared Error (Kilmainham Gaol)\n for K Neighbors and Ridge")
+plt.show()
+
+\end{verbatim}
+
+\subsection{ml\_functions.py}
+\begin{verbatim}
+    import numpy as np
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import KFold
+import matplotlib.pyplot as plt
+
+def generate_predictions(model, test_data):
+    """
+    Generates predictions on a dataset using an array of models 
+    Parameters
+    ----------
+    model : linear_model.Ridge
+        features
+    test_data : numpy.ndarray
+        input features
+    Returns
+    ----------
+    predictions_array : array
+    """
+    predictions_array = np.ndarray(len(test_data), dtype= np.float64 )
+    
+    predictions_array = model.predict(test_data)
+
+    return predictions_array
+
+
+def train_Kfold_ridge(X_features, y_features, alpha_value):
+    """
+    Uses K-fold cross validation 
+    Parameters
+    ----------
+    X_features : array 
+        features
+    y_features : array
+        target features
+    alpha_value : float
+        parameter for training
+    Returns
+    ----------
+    mean error : float
+    standard error : float
+    """
+    kf = KFold(n_splits=5)
+    model = Ridge(alpha=alpha_value)
+    errs = []
+    # model = linear_model.Lasso(alpha=1/(2*c_value), max_iter=1000000000).fit()
+    for train, test in kf.split(X_features):
+        model.fit(X_features[train],y_features[train])
+        ypred = model.predict(X_features[test])
+        from sklearn.metrics import mean_squared_error
+        # print("square error %f"%(mean_squared_error(y_features[test],ypred)))
+        errs.append(mean_squared_error(y_features[test],ypred))
+    # print(np.mean(errs))
+    return np.mean(errs), np.std(errs)
+
+
+def Kfold_for_alpha_ridge(X_features, y_features, alpha_range, title:str):
+    """
+    Uses K-fold cross validation with varied values of C
+    Parameters
+    ----------
+    X_features : array 
+        features
+    y_features : array
+        target features
+    C_range : array of float
+        parameters for training
+    Returns
+    ----------
+    nothing
+    """
+    error_array = np.zeros(len(alpha_range))
+    std_dev_array = np.zeros(len(alpha_range))
+    for i in range(len(alpha_range)):
+        # print("\n\n C = %f"%(C_range[i]))
+        error_array[i], std_dev_array[i] = train_Kfold_ridge(X_features, y_features, alpha_range[i])
+
+
+    # print(error_array)
+
+    plt.figure(title)
+    plt.errorbar(alpha_range, error_array, yerr=std_dev_array)
+    plt.xlabel('Alpha value')
+    plt.ylabel('Mean Squared Error')
+    plt.title(title)
+    # x = np.arange(len(error_array))
+    # plt.bar(x, C_range, error_array)
+\end{verbatim}
+
+\subsection{misc\_functions.py}
+\begin{verbatim}
+"""
+Contains miscellaneous functions that help with evaluating performance of models
+"""
+
+import matplotlib.pyplot as plt
+import matplotlib
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures
+
+def test():
+    """Test function"""
+    print("Imported Correctly")
+
+def map_plot(img:str, title:str, xlabel:str, ylabel:str, extents:list, lats:list, longs:list, labels:list):
+    """
+    Plot labelled points on a background image (possibly a map)
+
+    Parameters
+    ----------
+    img : str
+        location of background image
+    title : str
+        title of image
+    xlabel : str
+        label on the x-axis
+    ylabel : str
+        label on the y-axis
+    extents : list
+        extent of image (useful for maps). also used to maintein aspect ratio.
+    lats : list
+        List of latitude points.
+    longs : list
+        List of longitude points.
+    labels : list
+        List of labels for each point.
+
+    Returns
+    -----------
+    Nothing - Generates a matplotlib figure.
+    """
+    im = plt.imread(img)
+    plt.rc('font', size = 14)
+    plt.figure(f'{title}',figsize=(10,12))
+    plt.imshow(im, extent= extents)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+
+
+    
+    # changing aspect ratio of figure to match image 
+    # source: https://stackoverflow.com/questions/45685726/python-scatter-plot-over-background-image-for-data-verification?noredirect=1&lq=1
+    aspect=im.shape[0]/float(im.shape[1])*((extents[1]-extents[0])/(extents[3]-extents[2]))
+    plt.gca().set_aspect(aspect)
+
+    for i in range(len(longs)):
+        plt.scatter(longs[i], lats[i])
+        plt.annotate(f'{labels[i]}',xy=(longs[i],lats[i]))
+
+
+def plot_time_series_data(title:str, xlabel:str, ylabel:str, times:pd.Series, values:pd.Series):
+    plt.figure(f'{title}')
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.rc('font', size = 12)
+    times = times
+    values = values
+    plt.show()
+    return
+
+
+    
+def oneHot(X, y):
+    enc = OneHotEncoder()
+    enc.fit(X, y)
+    return enc.transform(X).toarray()
+
+
+def make_features(periods:int, dataframe:pd.DataFrame, col:str, name:str):
+    X = dataframe[col]
+    X = X.to_frame()
+    X.rename({col:name},axis = 1, inplace=True)
+
+    X = X.shift(periods=periods, fill_value = 0) # should change fill value
+    X.reset_index(inplace = True)
+    X.drop(columns=['index'], inplace=True)
+    # X.drop(axis=0, )
+    return X
+
+
+def make_poly_data(X_features, degree):
+    """
+    Makes polynomial products of the training data
+
+    Parameters
+    ----------
+    X_features : numpy.ndarray
+        features
+    degree : int
+        max polynomial order
+        
+    Returns
+    ----------
+    poly_X : numpy.ndarray
+    """
+
+    poly = PolynomialFeatures(degree)
+    poly_X = poly.fit_transform(X_features)
+    # print(X)
+    # print(poly_X)
+    # print(PolynomialFeatures(5).fit(X).get_feature_names(['X1', 'X2']))
+    return poly_X
+\end{verbatim}
+
+\subsection{metrics.py}
+\begin{verbatim}
+    """
+This file contains functions that help with evaluating performance of models
+"""
+from sklearn.metrics import mean_squared_error, r2_score
+from numpy import mean
+
+def test():
+    """Test function"""
+    print("Imported Correctly")
+
+def calculate_mse(pred, true):
+    """
+    calculates the mean squared error for a model.
+
+    Parameters
+    ----------
+    pred : list 
+        predicted feature values
+
+    true : list 
+        true feature values
+
+    Returns
+    ----------
+    average_loss : float
+        mean loss between predictions and truth
+
+    """
+
+    losses = mean_squared_error(y_true=true, y_pred=pred)
+    average_loss = mean(losses)
+    # print(f"average loss = {average_loss}")
+    return average_loss
+
+def calculate_R2(pred, true):
+    r2s = r2_score(y_true=true, y_pred=pred)
+    average_r2 = mean(r2s)
+    # print(f"average loss = {average_loss}")
+    return average_r2
+
+\end{verbatim}
